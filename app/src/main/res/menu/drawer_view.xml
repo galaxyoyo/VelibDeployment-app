@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    <group>
+        <item
+            android:id="@+id/nav_map"
+            android:icon="@drawable/ic_menu_gallery"
+            android:title="@string/map" />
+        <item
+            android:id="@+id/nav_global_statistics"
+            android:icon="@drawable/ic_menu_share"
+            android:title="@string/global_statistics" />
+        <item
+            android:id="@+id/nav_station_statistics"
+            android:icon="@drawable/ic_menu_send"
+            android:title="@string/station_statistics" />
+        <item
+            android:id="@+id/nav_avancement"
+            android:icon="@drawable/ic_info_black_24dp"
+            android:title="@string/avancement" />
+        <item
+            android:id="@+id/nav_help"
+            android:icon="@drawable/ic_menu_slideshow"
+            android:title="@string/help" />
+        <item
+            android:id="@+id/nav_manage"
+            android:icon="@drawable/ic_menu_manage"
+            android:title="@string/settings" />
+
+        <item
+            android:id="@+id/nav_twitter"
+            android:icon="@drawable/common_full_open_on_phone"
+            android:title="@string/twitter" />
+    </group>
+</menu>
