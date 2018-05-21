@@ -278,6 +278,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onCameraMoveStarted(int ignored) {
+        LinearLayout layout = findViewById(R.id.map_layout);
+        layout.clearFocus();
+
         if (System.currentTimeMillis() - lastUpdate < 30000L)
             return;
 
