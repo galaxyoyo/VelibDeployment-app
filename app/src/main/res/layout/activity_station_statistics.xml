@@ -5,42 +5,50 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        android:id="@+id/stations_linear_layout"
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:fillViewport="true"
+        android:scrollbarStyle="insideOverlay"
+        android:visibility="visible">
 
-        <AutoCompleteTextView
-            android:id="@+id/station_search"
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/stations_linear_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="" />
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/station_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            <AutoCompleteTextView
+                android:id="@+id/station_search"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="" />
 
-        <TextView
-            android:id="@+id/station_info"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            <TextView
+                android:id="@+id/station_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
 
-        <Button
-            android:id="@+id/electrify"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="invisible" />
+            <TextView
+                android:id="@+id/station_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <Button
+                android:id="@+id/electrify"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="invisible" />
 
 
-        <com.google.android.gms.ads.AdView xmlns:ads="http://schemas.android.com/apk/res-auto"
-            android:id="@+id/adView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            ads:adSize="BANNER"
-            ads:adUnitId="ca-app-pub-1691839407946394/6507879206"/>
-    </LinearLayout>
+            <com.google.android.gms.ads.AdView xmlns:ads="http://schemas.android.com/apk/res-auto"
+                android:id="@+id/adView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                ads:adSize="BANNER"
+                ads:adUnitId="ca-app-pub-1691839407946394/6507879206" />
+        </LinearLayout>
+    </ScrollView>
 
     <android.support.design.widget.NavigationView
         android:id="@+id/nav_view"
@@ -48,7 +56,7 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
-        app:menu="@menu/drawer_view"
-        app:headerLayout="@layout/nav_header"/>
+        app:headerLayout="@layout/nav_header"
+        app:menu="@menu/drawer_view" />
 
 </android.support.v4.widget.DrawerLayout>

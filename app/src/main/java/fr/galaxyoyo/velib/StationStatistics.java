@@ -51,7 +51,9 @@ import java.util.concurrent.Executors;
 public class StationStatistics extends AppCompatActivity {
 
     private XYMultipleSeriesRenderer renderer = new XYMultipleSeriesRenderer();
+    private XYMultipleSeriesRenderer journeys_renderer = new XYMultipleSeriesRenderer();
     private XYMultipleSeriesDataset dataset = new XYMultipleSeriesDataset();
+    private XYMultipleSeriesDataset journeys = new XYMultipleSeriesDataset();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,31 +114,38 @@ public class StationStatistics extends AppCompatActivity {
             }
         });
 
-        renderer.setAxisTitleTextSize(16);
-        renderer.setChartTitleTextSize(20);
-        renderer.setLabelsTextSize(15);
-        renderer.setLegendTextSize(20);
-        renderer.setPointSize(5f);
-        renderer.setMargins(new int[] { 30, 40, 20, 20 });
-        renderer.setMarginsColor(Color.WHITE);
-        renderer.setXLabels(10);
-        renderer.setYLabels(10);
+        for (XYMultipleSeriesRenderer renderer : new XYMultipleSeriesRenderer[]{renderer, journeys_renderer}) {
+            renderer.setAxisTitleTextSize(16);
+            renderer.setChartTitleTextSize(20);
+            renderer.setLabelsTextSize(15);
+            renderer.setLegendTextSize(20);
+            renderer.setPointSize(5f);
+            renderer.setMargins(new int[]{30, 40, 20, 20});
+            renderer.setMarginsColor(Color.WHITE);
+            renderer.setXLabels(10);
+            renderer.setYLabels(10);
+            renderer.setYAxisMin(0);
+            //renderer.setAxesColor(context.getResources().getColor(R.color.grey));
+            renderer.setLabelsColor(Color.BLACK);
+            renderer.setApplyBackgroundColor(true);
+            //renderer.setGridColor(context.getResources().getColor(R.color.grey_light));
+            renderer.setShowGrid(true);
+            renderer.setShowLegend(true);
+            renderer.setShowLabels(true);
+            renderer.setZoomEnabled(true, false);
+            renderer.setPanEnabled(true, false);
+        }
+
+
         renderer.setChartTitle("Disponibilité vélos");
         renderer.setXTitle("Heure");
         renderer.setYTitle("Nombre de vélos");
-        renderer.setYAxisMin(0);
-        //renderer.setAxesColor(context.getResources().getColor(R.color.grey));
-        renderer.setLabelsColor(Color.BLACK);
-        renderer.setApplyBackgroundColor(true);
-        //renderer.setGridColor(context.getResources().getColor(R.color.grey_light));
-        renderer.setShowGrid(true);
-        renderer.setShowLegend(true);
-        renderer.setShowLabels(true);
-        renderer.setZoomEnabled(true, false);
-        renderer.setPanEnabled(true, false);
-
         renderer.setXAxisMin(System.currentTimeMillis() / 60000 * 60000 - 86400000L);
         renderer.setXAxisMax(System.currentTimeMillis() / 60000 * 60000);
+
+        journeys_renderer.setChartTitle("Trajets quotidiens");
+        journeys_renderer.setXTitle("Date");
+        journeys_renderer.setYTitle("Dépôts/retraits");
 
         XYSeriesRenderer mecaRenderer = new XYSeriesRenderer(), mecaTotRenderer = new XYSeriesRenderer();
         XYSeriesRenderer elecRenderer = new XYSeriesRenderer(), elecTotRenderer = new XYSeriesRenderer();
@@ -171,11 +180,33 @@ public class StationStatistics extends AppCompatActivity {
         renderer.addSeriesRenderer(elecRenderer);
         renderer.addSeriesRenderer(elecTotRenderer);
 
+        XYSeriesRenderer depotsRenderer = new XYSeriesRenderer();
+        XYSeriesRenderer retraitsRenderer = new XYSeriesRenderer();
+        depotsRenderer.setColor(Color.BLUE);
+        depotsRenderer.setPointStyle(PointStyle.DIAMOND);
+        depotsRenderer.setDisplayChartValues(false);
+        depotsRenderer.setLineWidth(3);
+        depotsRenderer.setChartValuesTextSize(15);
+        depotsRenderer.setGradientEnabled(true);
+        retraitsRenderer.setColor(Color.RED);
+        retraitsRenderer.setPointStyle(PointStyle.DIAMOND);
+        retraitsRenderer.setDisplayChartValues(false);
+        retraitsRenderer.setLineWidth(3);
+        retraitsRenderer.setChartValuesTextSize(15);
+        retraitsRenderer.setGradientEnabled(true);
+        journeys_renderer.addSeriesRenderer(depotsRenderer);
+        journeys_renderer.addSeriesRenderer(retraitsRenderer);
+
         TimeChart chart = new TimeChart(dataset, renderer);
         chart.setDateFormat("dd/MM HH:mm");
 
+        TimeChart journeys_chart = new TimeChart(journeys, journeys_renderer);
+        chart.setDateFormat("dd/MM");
+
         GraphicalView view = new GraphicalView(getApplicationContext(), chart);
-        ((LinearLayout) findViewById(R.id.stations_linear_layout)).addView(view, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        ((LinearLayout) findViewById(R.id.stations_linear_layout)).addView(view, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1000));
+        GraphicalView journeys_view = new GraphicalView(getApplicationContext(), journeys_chart);
+        ((LinearLayout) findViewById(R.id.stations_linear_layout)).addView(journeys_view, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1000));
 
         ((LinearLayout) findViewById(R.id.stations_linear_layout)).removeView(adView);
         ((LinearLayout) findViewById(R.id.stations_linear_layout)).addView(adView);
@@ -295,6 +326,35 @@ public class StationStatistics extends AppCompatActivity {
 
                         renderer.setYAxisMax(Math.max(mecaTot.getMaxY(), elecTot.getMaxY()) + 1);
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        final TimeSeries depots = new TimeSeries("Vélos déposés");
+        journeys.addSeries(depots);
+        final TimeSeries retraits = new TimeSeries("Vélos retirés");
+        journeys.addSeries(retraits);
+
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String json = IOUtils.toString(new URL("http://galaxyoyo.com/velib/journeys.php?code=" + station.getCode()), Charset.defaultCharset());
+                    List<Map<String, String>> list = MapsActivity.gson.fromJson(json, new TypeToken<ArrayList<HashMap<String, String>>>() {
+                    }.getType());
+
+                    for (int i = 0; i < list.size(); i++) {
+                        Map<String, String> info = list.get(i);
+
+                        @SuppressLint("SimpleDateFormat") Date date = new SimpleDateFormat("yyyy-MM-dd").parse(info.get("date"));
+
+                        depots.add(date.getTime(), Double.parseDouble(info.get("depots")));
+                        retraits.add(date.getTime(), Double.parseDouble(info.get("retraits")));
+                    }
+
+                    journeys_renderer.setYAxisMax(Math.max(depots.getMaxY(), retraits.getMaxY()) + 1);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

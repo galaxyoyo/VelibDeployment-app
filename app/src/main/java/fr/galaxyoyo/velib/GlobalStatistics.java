@@ -39,6 +39,7 @@ import org.apache.commons.io.IOUtils;
 
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.sql.Time;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -55,8 +56,10 @@ public class GlobalStatistics extends AppCompatActivity {
 
     private XYMultipleSeriesRenderer stations_renderer = new XYMultipleSeriesRenderer();
     private XYMultipleSeriesRenderer bikes_renderer = new XYMultipleSeriesRenderer();
+    private XYMultipleSeriesRenderer journeys_renderer = new XYMultipleSeriesRenderer();
     private XYMultipleSeriesDataset stations_dataset = new XYMultipleSeriesDataset();
     private XYMultipleSeriesDataset bikes_dataset = new XYMultipleSeriesDataset();
+    private XYMultipleSeriesDataset journeys_dataset = new XYMultipleSeriesDataset();
 
     @SuppressLint({"SetTextI18n", "SimpleDateFormat"})
     @Override
@@ -226,7 +229,7 @@ public class GlobalStatistics extends AppCompatActivity {
         });
         weekOpenning.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, opened.size() * 179));
 
-        for (XYMultipleSeriesRenderer renderer : new XYMultipleSeriesRenderer[]{stations_renderer, bikes_renderer}) {
+        for (XYMultipleSeriesRenderer renderer : new XYMultipleSeriesRenderer[]{stations_renderer, bikes_renderer, journeys_renderer}) {
             renderer.setAxisTitleTextSize(16);
             renderer.setChartTitleTextSize(20);
             renderer.setLabelsTextSize(15);
@@ -261,6 +264,10 @@ public class GlobalStatistics extends AppCompatActivity {
         bikes_renderer.setXAxisMin(System.currentTimeMillis() / 60000 * 60000 - 86400000L);
         bikes_renderer.setXAxisMax(System.currentTimeMillis() / 60000 * 60000);
         bikes_renderer.setPanEnabled(true);
+
+        journeys_renderer.setChartTitle("Trajets quotidiens");
+        journeys_renderer.setXTitle("Jour");
+        journeys_renderer.setYTitle("Nombre de dépôts/retraits");
 
         XYSeriesRenderer stationsRenderer = new XYSeriesRenderer();
         stationsRenderer.setColor(Color.RED);
@@ -312,17 +319,40 @@ public class GlobalStatistics extends AppCompatActivity {
         bikes_renderer.addSeriesRenderer(elecRenderer);
         bikes_renderer.addSeriesRenderer(elecTotRenderer);
 
+        XYSeriesRenderer depotsRenderer = new XYSeriesRenderer();
+        depotsRenderer.setColor(Color.BLUE);
+        depotsRenderer.setPointStyle(PointStyle.DIAMOND);
+        depotsRenderer.setDisplayChartValues(false);
+        depotsRenderer.setLineWidth(3);
+        depotsRenderer.setChartValuesTextSize(15);
+        depotsRenderer.setGradientEnabled(true);
+        journeys_renderer.addSeriesRenderer(depotsRenderer);
+        XYSeriesRenderer retraitsRenderer = new XYSeriesRenderer();
+        retraitsRenderer.setPointStyle(PointStyle.DIAMOND);
+        retraitsRenderer.setDisplayChartValues(false);
+        retraitsRenderer.setLineWidth(3);
+        retraitsRenderer.setChartValuesTextSize(15);
+        retraitsRenderer.setColor(Color.RED);
+        retraitsRenderer.setGradientEnabled(true);
+        journeys_renderer.addSeriesRenderer(retraitsRenderer);
+
         TimeChart stations_chart = new TimeChart(stations_dataset, stations_renderer);
         stations_chart.setDateFormat("dd/MM");
 
         TimeChart bikes_chart = new TimeChart(bikes_dataset, bikes_renderer);
         bikes_chart.setDateFormat("dd/MM HH:mm");
 
+        TimeChart journeys_chart = new TimeChart(journeys_dataset, journeys_renderer);
+        journeys_chart.setDateFormat("dd/MM");
+
         GraphicalView stations_view = new GraphicalView(getApplicationContext(), stations_chart);
         ((LinearLayout) findViewById(R.id.global_linear_layout)).addView(stations_view, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 1000));
 
         GraphicalView bikes_view = new GraphicalView(getApplicationContext(), bikes_chart);
         ((LinearLayout) findViewById(R.id.global_linear_layout)).addView(bikes_view, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 1000));
+
+        GraphicalView journeys_view = new GraphicalView(getApplicationContext(), journeys_chart);
+        ((LinearLayout) findViewById(R.id.global_linear_layout)).addView(journeys_view, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 1000));
 
         ((LinearLayout) findViewById(R.id.global_linear_layout)).removeView(adView);
         ((LinearLayout) findViewById(R.id.global_linear_layout)).addView(adView);
@@ -377,7 +407,6 @@ public class GlobalStatistics extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    System.out.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(yesterday.getTime()));
                     String json = IOUtils.toString(new URL("http://galaxyoyo.com/velib/global_infos.php?after=" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(yesterday.getTime()) + "&period=1000"), Charset.defaultCharset());
                     List<Map<String, String>> list = MapsActivity.gson.fromJson(json, new TypeToken<ArrayList<HashMap<String, String>>>() {
                     }.getType());
@@ -394,6 +423,35 @@ public class GlobalStatistics extends AppCompatActivity {
                     }
 
                     bikes_renderer.setYAxisMax(Math.max(mecaTot.getMaxY(), elecTot.getMaxY()) + 1);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        final TimeSeries depots = new TimeSeries("Dépôts");
+        journeys_dataset.addSeries(depots);
+        final TimeSeries retraits = new TimeSeries("Retraits");
+        journeys_dataset.addSeries(retraits);
+
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String json = IOUtils.toString(new URL("http://galaxyoyo.com/velib/journeys_global.php"), Charset.defaultCharset());
+                    List<Map<String, String>> list = MapsActivity.gson.fromJson(json, new TypeToken<ArrayList<HashMap<String, String>>>() {
+                    }.getType());
+
+                    for (int i = 0; i < list.size(); i++) {
+                        Map<String, String> info = list.get(i);
+
+                        @SuppressLint("SimpleDateFormat") Date date = new SimpleDateFormat("yyyy-MM-dd").parse(info.get("date"));
+
+                        depots.add(date.getTime(), Double.parseDouble(info.get("depots")));
+                        retraits.add(date.getTime(), Double.parseDouble(info.get("retraits")));
+                    }
+
+                    journeys_renderer.setYAxisMax(Math.max(depots.getMaxY(), retraits.getMaxY()) + 1);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
