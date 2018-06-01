@@ -100,7 +100,8 @@ public class GlobalStatistics extends AppCompatActivity {
                 });
         navigationView.getMenu().getItem(1).setChecked(true);
 
-        int stations_opened = 0, working_stations = 0, closed_stations = 0, working_functionnal_stations = 0, functionnal_notworking_stations = 0, electrified = 0, deleted = 0, planned = 0, total = 0;
+        int stations_opened = 0, working_stations = 0, working_already_opened = 0, closed_stations = 0, maintenance = 0,
+                working_functionnal_stations = 0, functionnal_notworking_stations = 0, electrified = 0, deleted = 0, planned = 0, total = 0;
         int less_an_hour = 0, less_three_hours = 0, less_twelve_hours = 0, less_a_day = 0, more_a_day = 0;
         int bikes = 0, ebikes = 0, bikes_overflow = 0, ebikes_overflow = 0, free_docks = 0, total_docks = 0;
         for (Station st : MapsActivity.stations.values()) {
@@ -109,12 +110,16 @@ public class GlobalStatistics extends AppCompatActivity {
                     ++stations_opened;
                 else if (st.getState() == Station.State.CLOSE)
                     ++closed_stations;
+                else if (st.getState() == Station.State.MAINTENANCE)
+                    ++maintenance;
+                else if (st.getState() == Station.State.WORK_IN_PROGRESS)
+                    ++working_already_opened;
                 bikes += st.getNb_bike();
                 ebikes += st.getNb_ebike();
                 bikes_overflow += st.getNb_bike_overflow();
                 ebikes_overflow += st.getNb_ebike_overflow();
-                free_docks += st.getNb_free_edock();
-                total_docks += st.getNb_edock();
+                free_docks += st.getNb_free_edock() + st.getNb_free_dock();
+                total_docks += st.getNb_dock() + st.getNb_edock();
 
                 if (st.getNb_free_edock() == 0 && st.getState() == Station.State.OPERATIVE)
                     ++functionnal_notworking_stations;
@@ -164,9 +169,11 @@ public class GlobalStatistics extends AppCompatActivity {
         TextView stats = findViewById(R.id.stats);
         String text = "";
         text += stations_opened + " stations ouvertes sur 1400 au " + new SimpleDateFormat("dd MMM yyyy 'à' HH:mm").format(new Date()) + "\n";
-        text += working_stations + " stations sont en travaux\n";
-        text += electrified + " stations sont alimentées\n";
+        text += working_stations + " stations sont en travaux" + (working_already_opened > 0 ? " (plus " + working_already_opened + " déjà activée" + (working_already_opened > 1 ? "s" : "") + " précédemment)" : "") + "\n";
+        text += electrified + " stations sont alimentées (dernière mise à jour : mi mai)\n";
         text += closed_stations + " station" + (closed_stations > 1 ? "s" : "") + " fermée" + (closed_stations > 1 ? "s" : "") + "\n";
+        if (maintenance > 0)
+            text += maintenance + " station" + (maintenance > 1 ? "s sont" : " est") + " en maintenance" + "\n";
         text += planned + " anciennes stations sont en attente de travaux\n";
         text += deleted + " anciennes stations sont supprimées\n";
         text += total + " stations sont référencées au total\n";
@@ -183,6 +190,8 @@ public class GlobalStatistics extends AppCompatActivity {
         text += "\n";
         text += (bikes + bikes_overflow) + " vélos mécaniques (soit " + bikes + " en bornettes et " + bikes_overflow + " en overflow)\n";
         text += (ebikes + ebikes_overflow) + " vélos électriques (soit " + ebikes + " en bornettes et " + ebikes_overflow + " en overflow)\n";
+        // TODO Fix this on API update
+        total_docks = free_docks + bikes + ebikes;
         text += free_docks + " emplacements libres (sur un total de " + total_docks + ", soit " + ((float) (int) (1000.0 * free_docks / (float) total_docks) / 10.0) + " %)\n";
         stats.setText(text);
 

@@ -387,7 +387,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                         color = R.drawable.lightblue_dot;
                                     marker.setVisible(true);
                                 }
-                                if (st.getState() == Station.State.OPERATIVE && st.getNb_edock() == 0) {
+                                if (st.getState() == Station.State.OPERATIVE && st.getNb_bike() + st.getNb_ebike() + st.getNb_free_dock() + st.getNb_free_edock() == 0) {
                                     color = R.drawable.grey;
                                     marker.setAlpha(0.8F);
                                     if (!prefs.getBoolean("almost_working_stations", true))
@@ -434,7 +434,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 if (st.getState() == Station.State.OPERATIVE || st.getNb_free_edock() > 0) {
                                     snippet += "Vélos mécaniques : " + st.getNb_bike() + " (plus " + st.getNb_bike_overflow() + " en overflow)" + "\n";
                                     snippet += "Vélos électriques : " + st.getNb_ebike() + " (plus " + st.getNb_ebike_overflow() + " en overflow)" + "\n";
-                                    snippet += "Places libres : " + (st.getNb_free_dock() + st.getNb_free_edock()) + "\n";
+                                    snippet += "Places libres : " + st.getNb_free_edock() + " alimentées, " + st.getNb_free_dock() + " non alimentées" + "\n";
+                                    snippet += "Places totales : " + st.getNb_edock() + " alimentées, " + st.getNb_dock() + " non alimentées" + "\n";
                                 }
                                 if (st.getState() == Station.State.WORK_IN_PROGRESS) {
                                     snippet += "Officiellement en travaux\n";

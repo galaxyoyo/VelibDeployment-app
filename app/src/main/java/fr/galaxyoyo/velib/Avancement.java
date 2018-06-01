@@ -84,20 +84,36 @@ public class Avancement extends AppCompatActivity {
         });
 
         for (City city : cities) {
-            int opened = 0, alimented = 0, work = 0, total = city.getStations().size();
+            int opened = 0, alimented = 0, work = 0, close = 0, maintenance = 0, deleted = 0, total = city.getStations().size();
             for (Station st : city.getStations()) {
                 if (st.getActivation_date() != null && st.getState() == Station.State.OPERATIVE)
                     ++opened;
                 if (st.getState() == Station.State.WORK_IN_PROGRESS)
                     ++work;
+                else if (st.getState() == Station.State.CLOSE)
+                    ++close;
+                else if (st.getState() == Station.State.MAINTENANCE)
+                    ++maintenance;
+                else if (st.getState() == Station.State.DELETED)
+                    ++deleted;
                 if (st.isElectricity())
                     ++alimented;
             }
             if (total == 0)
                 continue;
+            total -= deleted;
             Map<String, String> map = Maps.newHashMap();
             map.put("commune", city.getFullname());
-            map.put("infos", opened + "/" + total + " stations ouvertes (" + (int) ((float) 100.0 * opened / (float) total) + " %) dont " + alimented + " alimentées; " + work + " en travaux");
+            String st = opened + "/" + total + " stations ouvertes (" + (int) ((float) 100.0 * opened / (float) total) + " %) dont " + alimented + " alimentées";
+            if (work > 0)
+                st += "; " + work + " en travaux";
+            if (close > 0)
+                st += "; " + close + " fermée" + (close > 1 ? "s" : "");
+            if (maintenance > 0)
+                st += "; " + maintenance + " en maintenance";
+            if (deleted > 0)
+                st += "; " + deleted + " supprimée" + (deleted > 1 ? "s" : "");
+            map.put("infos", st);
             data.add(map);
         }
         SimpleAdapter adapter = new SimpleAdapter(this, data, android.R.layout.simple_list_item_2, new String[] {"commune", "infos"}, new int[] {android.R.id.text1, android.R.id.text2});

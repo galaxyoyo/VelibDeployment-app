@@ -222,7 +222,8 @@ public class StationStatistics extends AppCompatActivity {
         if (station.getState() == Station.State.OPERATIVE || station.getNb_free_edock() > 0) {
             snippet += "Vélos mécaniques : " + station.getNb_bike() + " (dont " + station.getNb_bike_overflow() + " en overflow)" + "\n";
             snippet += "Vélos électriques : " + station.getNb_ebike() + " (dont " + station.getNb_ebike_overflow() + " en overflow)" + "\n";
-            snippet += "Places libres : " + (station.getNb_free_dock() + station.getNb_free_edock()) + "\n";
+            snippet += "Places libres : " + station.getNb_free_edock() + " alimentées, " + station.getNb_free_dock() + " non alimentées" + "\n";
+            snippet += "Places totales : " + station.getNb_edock() + " alimentées, " + station.getNb_dock() + " non alimentées" + "\n";
         }
         snippet += "Mise en service prévue : " + new SimpleDateFormat("dd/MM/yyyy").format(station.getPlanned_date()) + "\n";
         if (station.getState() == Station.State.WORK_IN_PROGRESS)
