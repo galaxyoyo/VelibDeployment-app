@@ -23,6 +23,7 @@ import android.widget.TextView;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.google.gson.reflect.TypeToken;
 
 import org.achartengine.GraphicalView;
@@ -61,7 +62,15 @@ public class StationStatistics extends AppCompatActivity {
         setContentView(R.layout.activity_station_statistics);
 
         AdView adView = findViewById(R.id.adView);
-        adView.loadAd(new AdRequest.Builder().build());
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        if (MapsActivity.ADS) {
+            MobileAds.initialize(this, "ca-app-pub-1691839407946394~3470243208");
+            adView.loadAd(new AdRequest.Builder().build());
+        }
+        else {
+            ((LinearLayout) findViewById(R.id.stations_linear_layout)).removeView(adView);
+            navigationView.getMenu().removeItem(R.id.remove_ads);
+        }
 
         if (MapsActivity.cities == null || MapsActivity.stations.isEmpty()) {
             startActivity(new Intent(StationStatistics.this, MapsActivity.class));
@@ -70,7 +79,6 @@ public class StationStatistics extends AppCompatActivity {
 
         final DrawerLayout mDrawerLayout = findViewById(R.id.drawer);
 
-        NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(
                 new NavigationView.OnNavigationItemSelectedListener() {
                     @Override
@@ -217,9 +225,12 @@ public class StationStatistics extends AppCompatActivity {
 
     @SuppressLint({"SimpleDateFormat", "SetTextI18n"})
     private void selectStation(final Station station) {
+        LinearLayout layout = findViewById(R.id.stations_linear_layout);
+        layout.clearFocus();
+
         String snippet = "";
         snippet += "Adresse : " + station.getAddress() + "\n";
-        if (station.getState() == Station.State.OPERATIVE || station.getNb_free_edock() > 0) {
+        if (station.getState() == Station.State.OPERATIVE || station.getNb_free_dock() + station.getNb_free_edock() > 0) {
             snippet += "Vélos mécaniques : " + station.getNb_bike() + " (dont " + station.getNb_bike_overflow() + " en overflow)" + "\n";
             snippet += "Vélos électriques : " + station.getNb_ebike() + " (dont " + station.getNb_ebike_overflow() + " en overflow)" + "\n";
             snippet += "Places libres : " + station.getNb_free_edock() + " alimentées, " + station.getNb_free_dock() + " non alimentées" + "\n";
@@ -232,9 +243,17 @@ public class StationStatistics extends AppCompatActivity {
             snippet += "Cette station a été supprimée\n";
         else if (station.getState() == Station.State.UNKNOWN)
             snippet += "Cette station n'est pas encore officiellement référencée\n";
+        else if (station.getState() == Station.State.RESEALED)
+            snippet += "Cette station est rebouchée\n";
+        else if (station.getState() == Station.State.COMING_SOON)
+            snippet += "Cette station est nouvelle et en attente de travaux\n";
         if (station.getState() == Station.State.CLOSE)
             snippet += "Cette station est fermée\n";
-        if (station.getState() == Station.State.OPERATIVE || station.getNb_free_edock() > 0) {
+        if (station.isDecaux())
+            snippet += "Renouvellemement d'une station Decaux\n";
+        else
+            snippet += "Création d'une nouvelle station\n";
+        if (station.getState() == Station.State.OPERATIVE || station.getNb_free_dock() + station.getNb_free_edock() > 0) {
             if (station.getActivation_date() != null)
                 snippet += "Activée le : " + new SimpleDateFormat("dd/MM/yyyy").format(station.getActivation_date()) + "\n";
             snippet += station.isCredit_card() ? "Accepte les cartes de crédit\n" : "N'accepte pas les cartes de crédit\n";
@@ -254,7 +273,7 @@ public class StationStatistics extends AppCompatActivity {
         view.setText(snippet);
 
         Button electrify = findViewById(R.id.electrify);
-        electrify.setVisibility(station.getState() == Station.State.OPERATIVE ? View.VISIBLE : View.INVISIBLE);
+        electrify.setVisibility(View.VISIBLE);
         electrify.setText(!station.isElectricity() ? getString(R.string.electrified) : getString(R.string.non_electrified));
         electrify.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -277,6 +296,7 @@ public class StationStatistics extends AppCompatActivity {
         });
 
         dataset.clear();
+        journeys.clear();
 
         final TimeSeries meca = new TimeSeries("Vélos mécaniques");
         dataset.addSeries(meca);

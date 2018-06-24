@@ -84,7 +84,7 @@ public class Avancement extends AppCompatActivity {
         });
 
         for (City city : cities) {
-            int opened = 0, alimented = 0, work = 0, close = 0, maintenance = 0, deleted = 0, total = city.getStations().size();
+            int opened = 0, alimented = 0, work = 0, close = 0, maintenance = 0, deleted = 0, resealed = 0, coming_soon = 0, total = city.getStations().size();
             for (Station st : city.getStations()) {
                 if (st.getActivation_date() != null && st.getState() == Station.State.OPERATIVE)
                     ++opened;
@@ -96,6 +96,10 @@ public class Avancement extends AppCompatActivity {
                     ++maintenance;
                 else if (st.getState() == Station.State.DELETED)
                     ++deleted;
+                else if (st.getState() == Station.State.RESEALED)
+                    ++resealed;
+                else if (st.getState() == Station.State.COMING_SOON)
+                    ++coming_soon;
                 if (st.isElectricity())
                     ++alimented;
             }
@@ -113,6 +117,10 @@ public class Avancement extends AppCompatActivity {
                 st += "; " + maintenance + " en maintenance";
             if (deleted > 0)
                 st += "; " + deleted + " supprimée" + (deleted > 1 ? "s" : "");
+            if (resealed > 0)
+                st += "; " + resealed + " rebouchée" + (resealed > 1 ? "s" : "");
+            if (coming_soon > 0)
+                st += "; " + coming_soon + " à venir";
             map.put("infos", st);
             data.add(map);
         }

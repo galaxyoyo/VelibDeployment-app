@@ -30,5 +30,8 @@
             android:id="@+id/nav_twitter"
             android:icon="@drawable/common_full_open_on_phone"
             android:title="@string/twitter" />
+
+        <item android:id="@+id/remove_ads"
+            android:title="@string/remove_ads" />
     </group>
 </menu>

@@ -41,4 +41,6 @@
     <string name="title_activity_avancement">Avancement</string>
     <string name="avancement">Avancement</string>
     <string name="twitter">Twitter @VelibDeployment</string>
+    <string name="remove_ads">Retirer les pubs</string>
+    <string name="station">Station</string>
 </resources>

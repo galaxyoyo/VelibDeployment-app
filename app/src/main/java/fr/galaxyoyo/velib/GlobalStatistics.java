@@ -24,6 +24,7 @@ import android.widget.TextView;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.google.common.collect.Lists;
 import com.google.gson.reflect.TypeToken;
 
@@ -39,7 +40,6 @@ import org.apache.commons.io.IOUtils;
 
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.sql.Time;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -68,7 +68,15 @@ public class GlobalStatistics extends AppCompatActivity {
         setContentView(R.layout.activity_global_statistics);
 
         AdView adView = findViewById(R.id.adView);
-        adView.loadAd(new AdRequest.Builder().build());
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        if (MapsActivity.ADS) {
+            MobileAds.initialize(this, "ca-app-pub-1691839407946394~3470243208");
+            adView.loadAd(new AdRequest.Builder().build());
+        }
+        else {
+            ((LinearLayout) findViewById(R.id.global_linear_layout)).removeView(adView);
+            navigationView.getMenu().removeItem(R.id.remove_ads);
+        }
 
         if (MapsActivity.cities == null || MapsActivity.stations.isEmpty()) {
             startActivity(new Intent(GlobalStatistics.this, MapsActivity.class));
@@ -77,7 +85,6 @@ public class GlobalStatistics extends AppCompatActivity {
 
         final DrawerLayout mDrawerLayout = findViewById(R.id.drawer);
 
-        NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(
                 new NavigationView.OnNavigationItemSelectedListener() {
                     @Override
@@ -101,7 +108,7 @@ public class GlobalStatistics extends AppCompatActivity {
         navigationView.getMenu().getItem(1).setChecked(true);
 
         int stations_opened = 0, working_stations = 0, working_already_opened = 0, closed_stations = 0, maintenance = 0,
-                working_functionnal_stations = 0, functionnal_notworking_stations = 0, electrified = 0, deleted = 0, planned = 0, total = 0;
+                working_functionnal_stations = 0, functionnal_notworking_stations = 0, electrified = 0, deleted = 0, planned = 0, resealed = 0, coming_soon = 0, total = 0;
         int less_an_hour = 0, less_three_hours = 0, less_twelve_hours = 0, less_a_day = 0, more_a_day = 0;
         int bikes = 0, ebikes = 0, bikes_overflow = 0, ebikes_overflow = 0, free_docks = 0, total_docks = 0;
         for (Station st : MapsActivity.stations.values()) {
@@ -146,6 +153,10 @@ public class GlobalStatistics extends AppCompatActivity {
 
             if (st.getState() == Station.State.DELETED)
                 ++deleted;
+            else if (st.getState() == Station.State.RESEALED)
+                ++resealed;
+            else if (st.getState() == Station.State.COMING_SOON)
+                ++coming_soon;
             else if (st.getState() == Station.State.UNKNOWN)
                 ++planned;
             else
@@ -174,7 +185,9 @@ public class GlobalStatistics extends AppCompatActivity {
         text += closed_stations + " station" + (closed_stations > 1 ? "s" : "") + " fermée" + (closed_stations > 1 ? "s" : "") + "\n";
         if (maintenance > 0)
             text += maintenance + " station" + (maintenance > 1 ? "s sont" : " est") + " en maintenance" + "\n";
-        text += planned + " anciennes stations sont en attente de travaux\n";
+        text += planned + " anciennes stations ne sont pas référencées et en attente de travaux\n";
+        text += resealed + " anciennes stations sont rebouchées\n";
+        text += coming_soon + " nouvelles stations sont annoncées\n";
         text += deleted + " anciennes stations sont supprimées\n";
         text += total + " stations sont référencées au total\n";
         text += less_an_hour + " stations affichent un mouvement depuis la dernière heure\n";

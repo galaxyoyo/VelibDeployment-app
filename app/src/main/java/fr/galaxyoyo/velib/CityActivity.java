@@ -74,6 +74,11 @@ public class CityActivity extends AppCompatActivity {
                 case UNKNOWN:
                     map.put("date", "Station Decaux pas encore en travaux");
                     break;
+                case RESEALED:
+                    map.put("date", "Rebouchée");
+                    break;
+                case COMING_SOON:
+                    map.put("date", "Nouvelle station à venir");
                 case DELETED:
                     map.put("date", "Supprimée");
                     break;

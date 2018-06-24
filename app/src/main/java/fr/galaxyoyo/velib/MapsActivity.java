@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -26,6 +27,11 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingClientStateListener;
+import com.android.billingclient.api.BillingFlowParams;
+import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
@@ -64,9 +70,11 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnCameraMoveStartedListener {
+    public static boolean ADS = true;
     public static Map<Integer, Station> stations = Maps.newHashMap();
     public static List<City> cities = Lists.newArrayList();
     public static Gson gson;
+    public static BillingClient billingClient;
     private GoogleMap mMap;
     private List<Marker> markers = Lists.newArrayList();
     public static long lastUpdate = 0L;
@@ -83,13 +91,71 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        MobileAds.initialize(this, "ca-app-pub-1691839407946394~3470243208");
-        AdView adView = findViewById(R.id.adView);
-        adView.loadAd(new AdRequest.Builder().build());
+        final NavigationView navigationView = findViewById(R.id.nav_view);
+        final AdView adView = findViewById(R.id.adView);
+
+        if (billingClient == null) {
+            billingClient = BillingClient.newBuilder(this).setListener(new PurchasesUpdatedListener() {
+                @Override
+                public void onPurchasesUpdated(final int responseCode, @Nullable List<Purchase> purchases) {
+                    new Handler(getApplicationContext().getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+                            builder.setTitle("Paiement");
+                            String infos;
+                            if (responseCode == BillingClient.BillingResponse.OK) {
+                                ADS = false;
+                                infos = "Votre achat a bien été pris en compte : vous ne verrez désormais plus de publicité (un redémarrage de l'application est toutefois nécessaire)." +
+                                        "Merci pour votre soutien !";
+                            }
+                            else {
+                                infos = "Un problème a eu lieu dans votre paiement. Vous n'avez pas été débité. Si le problème persiste, n'hésitez pas à me contacter.";
+                            }
+                            builder.setMessage(infos);
+                            builder.setPositiveButton("Ok", null);
+                            builder.create().show();
+                        }
+                    });
+                }
+            }).build();
+            billingClient.startConnection(new BillingClientStateListener() {
+                @Override
+                public void onBillingSetupFinished(int responseCode) {
+                    Purchase.PurchasesResult result = billingClient.queryPurchases(BillingClient.SkuType.INAPP);
+                    if (result.getPurchasesList() == null)
+                        return;
+
+                    for (Purchase purchase : result.getPurchasesList()) {
+                        if (!purchase.getPackageName().equals("fr.galaxyoyo.velib") || !purchase.getOriginalJson().contains("remove_ads"))
+                            continue;
+
+                        ADS = false;
+                    }
+
+                    new Handler(getApplicationContext().getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (ADS) {
+                                MobileAds.initialize(MapsActivity.this, "ca-app-pub-1691839407946394~3470243208");
+                                adView.loadAd(new AdRequest.Builder().build());
+                            }
+                            else {
+                                ((LinearLayout) findViewById(R.id.map_layout)).removeView(adView);
+                                navigationView.getMenu().removeItem(R.id.remove_ads);
+                            }
+                        }
+                    });
+                }
+
+                @Override
+                public void onBillingServiceDisconnected() {
+                }
+            });
+        }
 
         final DrawerLayout mDrawerLayout = findViewById(R.id.drawer);
 
-        NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(
                 new NavigationView.OnNavigationItemSelectedListener() {
                     @Override
@@ -108,6 +174,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             startActivity(new Intent(MapsActivity.this, SettingsActivity.class));
                         else if (item.getItemId() == R.id.nav_twitter)
                             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://twitter.com/VelibDeployment")));
+                        else if (item.getItemId() == R.id.remove_ads) {
+                            BillingFlowParams flowParams = BillingFlowParams.newBuilder()
+                                    .setSku("remove_ads")
+                                    .setType(BillingClient.SkuType.INAPP) // SkuType.SUB for subscription
+                                    .build();
+                            MapsActivity.billingClient.launchBillingFlow(MapsActivity.this, flowParams);
+                        }
 
                         return true;
                     }
@@ -335,6 +408,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 //noinspection SuspiciousMethodCalls
                                 final Station st = stations.get(marker.getTag());
 
+                                if (st.getState() == null)
+                                    st.setState(Station.State.UNKNOWN);
+
+                                // TODO Remove it
+                                if (st.getAltitude() == -1.0D)
+                                    st.setState(Station.State.RESEALED);
+                                else if (st.getAltitude() == -2.0D)
+                                    st.setState(Station.State.COMING_SOON);
+
                                 marker.setPosition(new LatLng(st.getLatitude(), st.getLongitude()));
                                 marker.setTitle(st.getCode() + " – " + st.getName());
                                 if (!st.isElectricity())
@@ -369,19 +451,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                         if (st.isOverflow_activation())
                                             color = R.drawable.purple_dot;
                                         break;
+                                    case COMING_SOON:
+                                        if (!prefs.getBoolean("unknown_stations", true))
+                                            marker.setVisible(false);
+                                        marker.setAlpha(0.4F);
+                                        color = R.drawable.pink;
+                                        break;
                                     case UNKNOWN:
                                         if (!prefs.getBoolean("unknown_stations", false))
                                             marker.setVisible(false);
                                         marker.setAlpha(0.2F);
                                         color = R.drawable.pink;
                                         break;
+                                    case RESEALED:
                                     case DELETED:
                                         if (!prefs.getBoolean("deleted_stations", false))
                                             marker.setVisible(false);
                                         marker.setAlpha(1.0F);
                                         color = R.drawable.purple;
                                 }
-                                if (st.getState() != Station.State.OPERATIVE && st.getState() != Station.State.CLOSE && st.getState() != Station.State.MAINTENANCE && st.getNb_edock() > 0) {
+                                if (st.getState() != Station.State.OPERATIVE && st.getState() != Station.State.CLOSE && st.getState() != Station.State.MAINTENANCE
+                                        && st.getNb_dock() + st.getNb_edock() > 0) {
                                     color = R.drawable.lightblue;
                                     if (st.isOverflow_activation())
                                         color = R.drawable.lightblue_dot;
@@ -431,7 +521,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                     marker.setVisible(false);
 
                                 String snippet = "";
-                                if (st.getState() == Station.State.OPERATIVE || st.getNb_free_edock() > 0) {
+                                if (st.getState() == Station.State.OPERATIVE || st.getNb_free_dock() + st.getNb_free_edock() > 0) {
                                     snippet += "Vélos mécaniques : " + st.getNb_bike() + " (plus " + st.getNb_bike_overflow() + " en overflow)" + "\n";
                                     snippet += "Vélos électriques : " + st.getNb_ebike() + " (plus " + st.getNb_ebike_overflow() + " en overflow)" + "\n";
                                     snippet += "Places libres : " + st.getNb_free_edock() + " alimentées, " + st.getNb_free_dock() + " non alimentées" + "\n";
@@ -441,11 +531,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                     snippet += "Officiellement en travaux\n";
                                     snippet += "Mise en service prévue : " + new SimpleDateFormat("dd/MM/yyyy").format(st.getPlanned_date()) + "\n";
                                 }
+                                if (st.getState() == Station.State.RESEALED)
+                                    snippet += "Station rebouchée\n";
+                                else if (st.getState() == Station.State.COMING_SOON)
+                                    snippet += "Station déplacée\n";
                                 if (st.getState() == Station.State.UNKNOWN) {
                                     snippet += "Pas encore officiellement en travaux\n";
                                     snippet += "Pas de date de mise en service à donner\n";
                                 }
-                                if (st.getState() == Station.State.OPERATIVE || st.getNb_free_edock() > 0) {
+                                if (st.getState() == Station.State.OPERATIVE || st.getNb_free_dock() + st.getNb_free_edock() > 0) {
                                     snippet += "Park+ : " + (st.isOverflow() ? "Possible (max " + st.getMax_bike_overflow() + " vélos)" : "Impossible") + "\n";
                                     snippet += "\n";
                                     snippet += "Dernier mouvement : " + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(st.getLast_movement()) + "\n";

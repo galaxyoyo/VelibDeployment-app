@@ -65,6 +65,10 @@ public class Station
 
     @Getter
     @Setter
+    private boolean decaux;
+
+    @Getter
+    @Setter
     private int nb_bike, nb_ebike, nb_free_dock, nb_free_edock;
 
     @Getter
@@ -73,7 +77,7 @@ public class Station
 
     public enum State
     {
-        OPERATIVE, WORK_IN_PROGRESS, MAINTENANCE, CLOSE, UNKNOWN, DELETED
+        OPERATIVE, WORK_IN_PROGRESS, MAINTENANCE, CLOSE, UNKNOWN, DELETED, RESEALED, COMING_SOON
     }
 
     @Override

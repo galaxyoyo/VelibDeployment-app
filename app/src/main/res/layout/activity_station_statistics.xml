@@ -16,13 +16,18 @@
             android:id="@+id/stations_linear_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:focusable="true"
+            android:focusableInTouchMode="true">
 
             <AutoCompleteTextView
                 android:id="@+id/station_search"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="" />
+                android:text=""
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:hint="@string/station" />
 
             <TextView
                 android:id="@+id/station_title"

@@ -7,9 +7,11 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.widget.LinearLayout;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 
 public class HelpActivity extends AppCompatActivity {
 
@@ -19,11 +21,18 @@ public class HelpActivity extends AppCompatActivity {
         setContentView(R.layout.activity_help);
 
         AdView adView = findViewById(R.id.adView);
-        adView.loadAd(new AdRequest.Builder().build());
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        if (MapsActivity.ADS) {
+            MobileAds.initialize(this, "ca-app-pub-1691839407946394~3470243208");
+            adView.loadAd(new AdRequest.Builder().build());
+        }
+        else {
+            ((LinearLayout) findViewById(R.id.help_linear_layout)).removeView(adView);
+            navigationView.getMenu().removeItem(R.id.remove_ads);
+        }
 
         final DrawerLayout mDrawerLayout = findViewById(R.id.drawer);
 
-        NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(
                 new NavigationView.OnNavigationItemSelectedListener() {
                     @Override
